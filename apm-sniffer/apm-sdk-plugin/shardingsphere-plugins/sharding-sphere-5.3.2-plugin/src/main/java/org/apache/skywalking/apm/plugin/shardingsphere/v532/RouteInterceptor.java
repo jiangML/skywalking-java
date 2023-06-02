@@ -18,7 +18,10 @@
 
 package org.apache.skywalking.apm.plugin.shardingsphere.v532;
 
+import org.apache.shardingsphere.infra.binder.QueryContext;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.context.tag.Tags;
+import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -31,8 +34,11 @@ public class RouteInterceptor implements InstanceMethodsAroundInterceptor {
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
                              MethodInterceptResult result) {
-        ContextManager.createLocalSpan("/ShardingSphere/routeSQL/")
+        AbstractSpan span = ContextManager.createLocalSpan("/ShardingSphere/routeSQL/")
                 .setComponent(ComponentsDefine.SHARDING_SPHERE);
+        QueryContext queryContext = (QueryContext) allArguments[1];
+        Tags.DB_STATEMENT.set(span, queryContext.getSql());
+        Tags.DB_BIND_VARIABLES.set(span, queryContext.getParameters().toString());
     }
     
     @Override

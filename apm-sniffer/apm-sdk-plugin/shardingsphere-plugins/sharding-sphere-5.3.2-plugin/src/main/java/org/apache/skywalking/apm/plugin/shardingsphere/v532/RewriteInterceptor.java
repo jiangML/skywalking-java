@@ -19,6 +19,8 @@
 package org.apache.skywalking.apm.plugin.shardingsphere.v532;
 
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.context.tag.Tags;
+import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -31,8 +33,10 @@ public class RewriteInterceptor implements InstanceMethodsAroundInterceptor {
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
                              MethodInterceptResult result) {
-        ContextManager.createLocalSpan("/ShardingSphere/rewriteSQL/")
+        AbstractSpan span = ContextManager.createLocalSpan("/ShardingSphere/rewriteSQL/")
                 .setComponent(ComponentsDefine.SHARDING_SPHERE);
+        Tags.DB_STATEMENT.set(span, (String) allArguments[0]);
+        Tags.DB_BIND_VARIABLES.set(span, allArguments[1].toString());
     }
     
     @Override

@@ -18,7 +18,10 @@
 
 package org.apache.skywalking.apm.plugin.shardingsphere.v532;
 
+import org.apache.shardingsphere.infra.executor.sql.execute.engine.driver.jdbc.JDBCExecutionUnit;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
+import org.apache.skywalking.apm.agent.core.context.tag.Tags;
+import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.InstanceMethodsAroundInterceptor;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.MethodInterceptResult;
@@ -31,17 +34,24 @@ public class ExecuteInterceptor implements InstanceMethodsAroundInterceptor {
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
         MethodInterceptResult result) {
-        ContextManager.createLocalSpan("/ShardingSphere/executeSQL/").setComponent(ComponentsDefine.SHARDING_SPHERE);
-        ContextManager.continued(RootSpanContext.get());
+        if (null != RootSpanContext.get()) {
+            JDBCExecutionUnit executionUnit = (JDBCExecutionUnit) allArguments[0];
+            AbstractSpan span = ContextManager.createLocalSpan("/ShardingSphere/executeSQL/")
+                    .setComponent(ComponentsDefine.SHARDING_SPHERE);
+            Tags.DB_INSTANCE.set(span, executionUnit.getExecutionUnit().getDataSourceName());
+            Tags.DB_STATEMENT.set(span, executionUnit.getExecutionUnit().getSqlUnit().getSql());
+            Tags.DB_BIND_VARIABLES.set(span, executionUnit.getExecutionUnit().getSqlUnit().getParameters().toString());
+            ContextManager.continued(RootSpanContext.get());
+        }
     }
-
+    
     @Override
     public Object afterMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
         Object ret) {
         ContextManager.stopSpan();
         return ret;
     }
-
+    
     @Override
     public void handleMethodException(EnhancedInstance objInst, Method method, Object[] allArguments,
         Class<?>[] argumentsTypes, Throwable t) {
